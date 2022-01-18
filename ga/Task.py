@@ -1,27 +1,29 @@
-class Task(object):
-    def __init__(self, dimension: int, capacity: int):
-        self.dimension: int = dimension
-        self.capacity: int = capacity
+from abc import abstractmethod, ABCMeta
 
-    def getStride(self, tx: list[float], tmp_tx: list[float], window: list[float]) -> int:
-        stride: int
-        if (tmp_tx.size() - window.length) % (self.dimension - 1) == 0:
-            stride = (tmp_tx.size() - window.length) / (self.dimension - 1)
-        else:
-            stride = (tmp_tx.size() - window.length) / (self.dimension - 1) + 1
-            zero_padding: int = (self.dimension - 1) * stride + window.length - tx.size()
-            for i in range(0, zero_padding, 1):
-                tmp_tx.add(0.0)
-        return stride
 
-    def computeFitness(self, individual: list[float]) -> float:
+class Task:
+    __metaclass__ = ABCMeta
+
+    @abstractmethod
+    def getStride(self, tx, tmp_tx, windowT):
         pass
 
-    def makeIndividualVail(self, individual: list[float]):
+    @abstractmethod
+    def computeFitness(self, individual):
         pass
 
-    def checkIndividualVail(self, individual: list[float]) -> bool:
+    @abstractmethod
+    def makeIndividualVail(self, individual):
         pass
 
+    @abstractmethod
+    def checkIndividualVail(self, individual):
+        pass
+
+    @abstractmethod
     def getLenGen(self):
+        pass
+
+    @abstractmethod
+    def parseFile(self, fileName):
         pass

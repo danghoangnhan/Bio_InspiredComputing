@@ -1,34 +1,25 @@
-import sys
 from random import random
-
 from typing import List
 
 from ga.Individual import Individual
-from Task import Task
+from ga.Task import Task
 
 
-class Population:
-    individuals: list[Individual]
-
-    def __init__(self, n: int, tasks: list[Task]):
+class Population(Task):
+    def __init__(self, n: int, tasks: List[Task]):
         self.nIndividual: int = n
-        self.nTask: int = tasks.size()
+        self.nTask: int = len(tasks)
         self.tasks: list[Task] = tasks
+        self.individuals = None
+        maxDimension: int = max(self.tasks, key=lambda task: task.dimension).dimension
+        minDimension: int = min(self.tasks, key=lambda task: task.dimension).dimension
 
-        max: int = 0
-        min: int = sys.maxsize
-
-        for task in self.tasks:
-            if task.getLenGen() > max:
-                max = task.getLenGen()
-            if task.getLenGen() < min:
-                min = task.getLenGen()
-        self.lenGen = max
+        self.lenGen = maxDimension
 
     def init(self):
-        individuals: list = []
+        self.individuals: list = []
 
-        for i in range(0, self.nIndividual, 1):
+        for i in range(self.nIndividual):
             g: list[float] = random.sample(range(0, 1), self.lenGen)
 
             if self.checkIndividualVail(g):
@@ -36,12 +27,12 @@ class Population:
 
             fitnessTa: list[float] = [task.computeFitness(g) for task in self.tasks]
 
-            ind = Individual(g, fitnessTa)
-            individuals.add(ind)
+            ind: Individual = Individual(g, fitnessTa)
+            self.individuals.add(ind)
 
         self.updateRankPopulation()
 
-    def checkIndividualVail(self, ind: list[float]) -> bool:
+    def checkIndividualVail(self, ind: List[float]) -> bool:
         for task in self.tasks:
             if task.checkIndividualVail(ind):
                 return True
@@ -62,14 +53,14 @@ class Population:
             i = (i + 1) % self.tasks.size()
 
     def updateRankPopulation(self):
-        rankInTask: list[Individual] = [[] for _ in range(0, self.nTask, 1)]
+        rankInTask: List[Individual] = [[] for _ in range(0, self.nTask, 1)]
 
         for i_in in range(self.nIndividual):
             ind: Individual = self.individuals.get(i_in)
             for i in range(self.nTask):
-                lstIndividualInTask: list[Individual] = rankInTask.get(i);
+                lstIndividualInTask: list[Individual] = rankInTask.get(i)
                 check: bool = True
-                for j in range(0, lstIndividualInTask.size(), 1):
+                for j in range(lstIndividualInTask.size()):
                     if lstIndividualInTask.get(j).getFitnessTask().get(i) > ind.getFitnessTask().get(i):
                         lstIndividualInTask.add(j, ind)
                         check = False
@@ -83,10 +74,11 @@ class Population:
             factorial_rank: list[int] = []
             min_rank: int = self.nIndividual + 2
             task_rank_min: int = -1
+
             for j in range(self.nTask):
                 rankJ: int = rankInTask.get(j).indexOf(ind) + 1
                 factorial_rank.add(rankJ)
-                if (rankJ < min_rank):
+                if rankJ < min_rank:
                     min_rank = rankJ
                     task_rank_min = j
 

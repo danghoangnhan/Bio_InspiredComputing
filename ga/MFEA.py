@@ -1,14 +1,20 @@
 from random import randrange, random
 
-import Population
+from typing import List
+
+from ga.Population import Population
 from ga.Task import Task
 from ga.Individual import Individual
 
 
 class MFEA:
-    def __init__(self, tasks: list[Task], numOfInd: int,
-                 pOfMutation: float, timeResetPopulation: int,
-                 ITERATION: float = 10000000000.0, LIMIT: int = 1000):
+    def __init__(self,
+                 tasks: List[Task],
+                 numOfInd: int,
+                 pOfMutation: float,
+                 timeResetPopulation: int,
+                 ITERATION: float = 10000000000.0,
+                 LIMIT: int = 1000):
 
         self.tasks = tasks
         self.timeResetPopulation = timeResetPopulation
@@ -18,10 +24,9 @@ class MFEA:
         self.LIMIT: int = LIMIT
 
     def run(self, nN: int):
-        bestSolution: list = [self.population.individuals.get(i) for i in range(len(self.tasks))]
-        changeBest: int = 0
-
         self.population.init()
+        bestSolution: list = [self.population.individuals[i] for i in range(len(self.tasks))]
+        changeBest: int = 0
 
         for i in range(self.ITERATION):
             for ii in range(self.tasks):
@@ -31,16 +36,17 @@ class MFEA:
                 print(i + ":", ii, ": ", ind.fitnessTask)
 
             changeBest += 1
+
             if changeBest >= self.timeResetPopulation:
                 self.population.init()
                 changeBest = 0
 
-            individuals: list[Individual] = self.population.getIndividuals()
+            individuals: list[Individual] = self.population.individuals
             children: list[Individual] = []
 
             for j in range(nN):
-                a: Individual = individuals.get((lenindividuals))
-                b: Individual = individuals.get(randrange(individuals.size()))
+                a: Individual = individuals.get(randrange(len(individuals)))
+                b: Individual = individuals.get(randrange(len(individuals)))
 
                 while a == b:
                     b = individuals.get(randrange(len(individuals)))
@@ -48,15 +54,15 @@ class MFEA:
                 ta: int = a.skillFactor
                 tb: int = b.skillFactor
 
-                t: float = r.nextDouble()
+                t: float = random.uniform(0, 1)
 
                 if (ta == tb) or (t > self.pOfMutation):
                     children.addAll(self.crossOver(a, b))
                 else:
                     ia: Individual = self.mutation(a)
                     ib: Individual = self.mutation(b)
-                    children.add(ia)
-                    children.add(ib)
+                    children.append(ia)
+                    children.append(ib)
 
             self.population.add(children)
             self.selection()
@@ -68,7 +74,7 @@ class MFEA:
 
         t: int = randrange(len(a.gen))
         c: list[float] = [None in range(len(a.gen))]
-        c.set(t, r.nextDouble())
+        c.set(t, random.uniform(0, 1))
 
         if self.population.checkIndividualVail(c):
             self.population.makeIndividualVail(c)
@@ -85,9 +91,11 @@ class MFEA:
 
         return ind
 
-    def crossOver(self, a, b):
+    def crossOver(self, a, b) -> List[Individual]:
+
         children: list[Individual] = []
         fR: list[int] = [(len(self.population.individuals.size()) + 1) for _ in range(len(self.tasks))]
+
         t: int = randrange(len(a.gen) - 1)
 
         cb: list[float] = [b.gen[0:t].append(a.gen[t:len(a.gen - 1)])]
@@ -99,21 +107,14 @@ class MFEA:
         ind1 = Individual(ca, None)
         rand: float = random.uniform(0, 1)
 
-        if rand < 0.5:
-            ind1.setSkillFactor(a.skillFactor)
-        else:
-            ind1.setSkillFactor(b.skillFactor)
+        ind1.skillFactor = a.skillFactor if rand < 0.5 else b.skillFactor
 
-        fitnessTa: list[float] = []
-        for i in range(len(self.tasks)):
-            if i != ind1.skillFactor:
-                fitnessTa.add(self.LIMIT)
-            else:
-                fitnessTa.add(self.tasks.get(i).computeFitness(ca))
+        fitnessTa: list[float] = [self.LIMIT if i != ind1.skillFactor else self.tasks[i].computeFitness(ca)
+                                  for i in range(len(self.tasks))]
 
-        ind1.setFitnessTask(fitnessTa)
-        ind1.setFactorial_rank(fR)
-        children.add(ind1)
+        ind1.fitnessTask(fitnessTa)
+        ind1.factorial_rank(fR)
+        children.append(ind1)
 
         if self.population.checkIndividualVail(cb):
             self.population.makeIndividualVail(cb)
@@ -121,18 +122,10 @@ class MFEA:
         ind2 = Individual(cb, None)
         rand: float = random.uniform(0, 1)
 
-        if rand < 0.5:
-            ind2.setSkillFactor(a.skillFactor)
-        else:
-            ind2.setSkillFactor(b.skillFactor)
+        ind2.skillFactor = a.skillFactor if rand < 0.5 else b.skillFactor
 
-        fitnessTa: list[float] = []
-
-        for i in range(len(self.tasks)):
-            if i != ind1.skillFactor:
-                fitnessTa.add(self.LIMIT)
-            else:
-                fitnessTa.add(self.tasks.get(i).computeFitness(ca))
+        fitnessTa: list[float] = [self.LIMIT if i != ind2.skillFactor else self.tasks.computeFitness(cb)
+                                  for i in range(len(self.tasks))]
 
         ind2.setFitnessTask(fitnessTa)
         ind2.setFactorial_rank(fR)
@@ -143,14 +136,15 @@ class MFEA:
     def selection(self):
         # sort list by `individuals` in the natural order
         self.population.individuals(key=lambda individual: individual.scalarFitness)
-        newIndividuals: list[Individual] = [self.population.getIndividuals().get(i)
+        newIndividuals: List[Individual] = [self.population.individuals[i]
                                             for i in range(self.population.nIndividual)]
-        self.population.setIndividuals(newIndividuals)
+        self.population.individuals = newIndividuals
 
-    def reComputeFitnessTaskForChild(self, children: list[Individual]):
+    def reComputeFitnessTaskForChild(self, children: List[Individual]):
+
         for child in children:
-            fT: list[float] = child.fitnessTask
+            fT: List[float] = child.fitnessTask
             for j in range(len(self.tasks)):
                 if fT.get(j) == self.LIMIT:
-                    t: Task = self.tasks.get(j)
-                    fT.set(j, t.computeFitness(child.gen))
+                    t: Task = self.tasks[j]
+                    fT[j] = t.computeFitness(child.gen)
