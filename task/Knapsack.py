@@ -1,6 +1,10 @@
+import copy
 from abc import ABC
 from collections import namedtuple
 from typing import List
+
+import numpy as np
+
 from ga.Task import Task
 
 Genome = List[int]
@@ -25,14 +29,9 @@ second_example = [
 
 class Knapsack(Task, ABC):
     def __init__(self, fileName):
-
-        self.priceWeightLineNumbers: list[int] = []
-        self.prices: list[int] = []
-        self.weights: list[int] = []
-        self.weightedPrices: list[float] = []
-
         self.parseFile(fileName)
-
+        self.stride = 0
+        self.window = np.random.uniform(0, 1,4)
     def generate_things(self, num: int) -> [Thing]:
         return [Thing(f"thing{i}", i, i) for i in range(1, num + 1)]
 
@@ -80,19 +79,81 @@ class Knapsack(Task, ABC):
             self.dimension = index[0]
             self.capacity = index[1]
 
-            self.priceWeightLineNumbers = [i for i in range(self.dimension)]
+            self.priceWeightLineNumbers = np.array([i for i in range(self.dimension)])
+            self.weights = np.empty(self.dimension, dtype=float, order='C')
+            self.prices = np.empty(self.dimension, dtype=float, order='C')
+            self.weightedPrices = np.empty(self.dimension, dtype=float, order='C')
 
             currentIndex: int = 0
+
             for j in range(2, len(index), 2):
-                print(currentIndex, " ", j, '\n')
-                self.weights.append(index[j])
-                self.prices.append(index[j + 1])
-                self.weightedPrices.append(self.prices[currentIndex] * 1.0 / self.weights[currentIndex])
+                self.weights[currentIndex] = index[j]
+                self.prices[currentIndex] = index[j + 1]
                 currentIndex += 1
+
+        self.weightedPrices = self.prices * 1.0 / self.weights
 
         for i in range(self.dimension - 1):
             for j in range(i + 1, self.dimension, 1):
                 if self.weightedPrices[i] > self.weightedPrices[j]:
-                    self.weightedPrices[i], self.weightedPrices[j] = self.weightedPrices[j], self.weightedPrices[i]
-                    self.priceWeightLineNumbers[i], self.priceWeightLineNumbers[j] = self.priceWeightLineNumbers[j], \
-                                                                                     self.priceWeightLineNumbers[i]
+                    self.weightedPrices[i], self.weightedPrices[j] = self.weightedPrices[j], \
+                                                                     self.weightedPrices[i]
+                    self.priceWeightLineNumbers[i], self.priceWeightLineNumbers[j] = \
+                        self.priceWeightLineNumbers[j], \
+                        self.priceWeightLineNumbers[i]
+
+    def checkIndividualVail(self, ind):
+        x = self.decode(ind)
+        res = np.sum(np.multiply(self.weights, x))
+        return res > self.capacity
+
+    def decode(self, x):
+        tmp_x = np.ndarray.copy(x)
+        kp = []
+        if len(tmp_x) > self.dimension:
+            stride = self.getStride(x, tmp_x, self.window)
+
+            for i in range(0, tmp_x.size(), stride):
+                tmp: float = sum([tmp_x[i + j] * self.window[j] for j in range(self.window.length)])
+                if tmp > 1:
+                    tmp /= 10
+                kp.append((int(round(tmp))))
+        else:
+            kp = np.round(tmp_x, 0)
+        return kp
+
+    def makeIndividualVail(self, x):
+        x_decode = self.decode(x)
+        wx: float = self.getWeight(x)
+        i: int = 0
+        if x.shape[0] > self.dimension:
+            while wx > self.capacity:
+                if x_decode[self.priceWeightLineNumbers[i]] == 1:
+                    wx = wx - self.weights[self.priceWeightLineNumbers[i]]
+                    for k in range(self.window.shape[0]):
+                        x.set(self.priceWeightLineNumbers[i] * self.stride + k, 0.5 / (self.window.shape[0] * self.windowMax()))
+                i += 1
+        else:
+            while wx > self.capacity:
+                if x_decode[self.priceWeightLineNumbers[i]] == 1:
+                    wx -= self.weights[self.priceWeightLineNumbers[i]]
+                    x[self.priceWeightLineNumbers[i]] = x[self.priceWeightLineNumbers[i]] - 0.5
+                i += 1
+
+    def getWeight(self, ind):
+        x = self.decode(ind)
+        res = np.sum(np.multiply(self.weights,x))
+        return res
+
+    def windowMax(self):
+        maxWindow:float = -1
+        for window in range(self.window):
+            if window > maxWindow:
+                maxWindow = window
+        maxWindow = np.amax(self.window)
+        return max
+
+    def computeFitness(self,ind):
+        x = self.decode(ind)
+        res = 0 - np.sum(np.multiply(self.prices, x))
+        return res

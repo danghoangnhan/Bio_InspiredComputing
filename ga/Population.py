@@ -1,5 +1,8 @@
-from random import random
+import copy
+import random
 from typing import List
+
+import numpy as np
 
 from ga.Individual import Individual
 from ga.Task import Task
@@ -20,68 +23,107 @@ class Population(Task):
         self.individuals: list = []
 
         for i in range(self.nIndividual):
-            g: list[float] = random.sample(range(0, 1), self.lenGen)
-
+            g: list[float] = np.random.uniform(0, 1, self.lenGen)
             if self.checkIndividualVail(g):
                 self.makeIndividualVail(g)
 
             fitnessTa: list[float] = [task.computeFitness(g) for task in self.tasks]
 
             ind: Individual = Individual(g, fitnessTa)
-            self.individuals.add(ind)
+            self.individuals.append(ind)
 
         self.updateRankPopulation()
 
-    def checkIndividualVail(self, ind: List[float]) -> bool:
+    def checkIndividualVail(self, ind) -> bool:
         for task in self.tasks:
             if task.checkIndividualVail(ind):
                 return True
         return False
 
-    def makeIndividualVail(self, g: List[float]):
-        i: int = 0
+    def makeIndividualVail(self, genome: List[float]):
         xd: int = 0
-        while True:
-            t: Task = self.tasks.get(i)
-            if t.checkIndividualVail(self.ind):
-                xd = 0
-                t.makeIndividualVail(self.ind)
-            else:
-                xd += 1
-            if xd >= self.tasks.size():
-                break
-            i = (i + 1) % self.tasks.size()
+        while xd < len(self.tasks):
+            for task in self.tasks:
+                if task.checkIndividualVail(genome):
+                    xd = 0
+                    task.makeIndividualVail(genome)
+                else:
+                    xd += 1
 
     def updateRankPopulation(self):
         rankInTask: List[Individual] = [[] for _ in range(0, self.nTask, 1)]
 
-        for i_in in range(self.nIndividual):
-            ind: Individual = self.individuals.get(i_in)
+        for ind in self.individuals:
             for i in range(self.nTask):
-                lstIndividualInTask: list[Individual] = rankInTask.get(i)
+                lstIndividualInTask: list[Individual] = rankInTask[i]
                 check: bool = True
-                for j in range(lstIndividualInTask.size()):
-                    if lstIndividualInTask.get(j).getFitnessTask().get(i) > ind.getFitnessTask().get(i):
-                        lstIndividualInTask.add(j, ind)
+                for j in range(len(lstIndividualInTask)):
+                    if lstIndividualInTask[j].fitnessTask[i] > ind.fitnessTask[i]:
+                        lstIndividualInTask.insert(j, ind)
                         check = False
                         break
                 if check:
-                    lstIndividualInTask.add(ind)
-                rankInTask.set(i, lstIndividualInTask)
+                    lstIndividualInTask.append(ind)
+                rankInTask[i] = lstIndividualInTask
 
-        for i in range(self.nIndividual1):
-            ind: Individual = self.individuals.get(i)
+        for ind in self.individuals:
             factorial_rank: list[int] = []
             min_rank: int = self.nIndividual + 2
             task_rank_min: int = -1
 
             for j in range(self.nTask):
-                rankJ: int = rankInTask.get(j).indexOf(ind) + 1
-                factorial_rank.add(rankJ)
+                rankJ: int = rankInTask[j].index(ind) + 1
+                factorial_rank.append(rankJ)
                 if rankJ < min_rank:
                     min_rank = rankJ
                     task_rank_min = j
 
-            ind.setFactorial_rank(factorial_rank)
-            ind.setSkillFactor(task_rank_min)
-            ind.setScalarFitness(1.0 / min_rank)
+            ind.factorial_rank = factorial_rank
+            ind.skillFactor = task_rank_min
+            ind.scalarFitness = 1.0 / min_rank
+
+    def getIndividualBestOfTask(self, task):
+        best = min(self.individuals, key=lambda individual: individual.factorial_rank[task])
+        return best
+
+    def add(self, offsprings: list[Individual]):
+
+        self.individuals += offsprings
+
+        for offspring in offsprings:
+            child: Individual = offspring
+            rankInTask = self.countRank(child.skillFactor)
+            index: int = -1
+            for j in range(len(rankInTask)):
+                if rankInTask[j].fitnessTask[child.skillFactor] > child.fitnessTask[child.skillFactor]:
+                    index = j
+                    break
+            if index > -1:
+                for j in range(index, len(rankInTask), 1):
+                    tmpIndividual: Individual = rankInTask[j]
+                    rank = tmpIndividual.factorial_rank
+                    rank[child.skillFactor] = rank[child.skillFactor] + 1
+                    tmpIndividual.factorial_rank = rank
+            else:
+                index = len(rankInTask)
+            facRankInd = [len(self.individuals) + 1 for _ in range(self.nTask)]
+
+            facRankInd[child.skillFactor] = index + 1
+            child.setFactorial_rank = facRankInd
+            offspring = child
+
+        for ind in offsprings:
+            ind.scalarFitness = 1 / ind.getMinFactorialRank()
+
+    def countRank(self, task: int):
+        lstIndividualInTask: list[Individual] = []
+        for ind in self.individuals:
+            check: bool = True
+            for j in range(len(lstIndividualInTask)):
+                if lstIndividualInTask[j].fitnessTask[task] > ind.fitnessTask[task]:
+                    lstIndividualInTask.insert(j, ind)
+                    check = False
+                    break
+            if check:
+                lstIndividualInTask.append(ind)
+        return lstIndividualInTask
