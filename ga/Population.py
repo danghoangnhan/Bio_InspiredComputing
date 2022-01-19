@@ -1,4 +1,5 @@
 import copy
+import operator
 import random
 from typing import List
 
@@ -23,22 +24,19 @@ class Population(Task):
         self.individuals: list = []
 
         for i in range(self.nIndividual):
-            g: list[float] = np.random.uniform(0, 1, self.lenGen)
+            g: List[float] = np.random.uniform(0, 1, self.lenGen)
+
             if self.checkIndividualVail(g):
                 self.makeIndividualVail(g)
 
-            fitnessTa: list[float] = [task.computeFitness(g) for task in self.tasks]
-
-            ind: Individual = Individual(g, fitnessTa)
-            self.individuals.append(ind)
+            fitnessTa: List[float] = [task.computeFitness(g) for task in self.tasks]
+            self.individuals.append(Individual(g, fitnessTa))
 
         self.updateRankPopulation()
 
     def checkIndividualVail(self, ind) -> bool:
-        for task in self.tasks:
-            if task.checkIndividualVail(ind):
-                return True
-        return False
+        result = any([task.checkIndividualVail(ind) for task in self.tasks])
+        return result
 
     def makeIndividualVail(self, genome: List[float]):
         xd: int = 0
@@ -66,18 +64,19 @@ class Population(Task):
                     lstIndividualInTask.append(ind)
                 rankInTask[i] = lstIndividualInTask
 
-        for ind in self.individuals:
+        for indIndex, ind in enumerate(self.individuals):
             factorial_rank: list[int] = []
             min_rank: int = self.nIndividual + 2
             task_rank_min: int = -1
 
-            for j in range(self.nTask):
-                rankJ: int = rankInTask[j].index(ind) + 1
-                factorial_rank.append(rankJ)
+            for j, task in enumerate(rankInTask):
+                rankJ: int = task.index(ind) + 1
+                factorial_rank.append(task.index(ind) + 1)
                 if rankJ < min_rank:
                     min_rank = rankJ
                     task_rank_min = j
-
+            factorial_rank1: list[int] = [task.index(ind) + 1 for task in rankInTask]
+            min_index, min_value = min([(index, value) for index, value in enumerate(factorial_rank1)])
             ind.factorial_rank = factorial_rank
             ind.skillFactor = task_rank_min
             ind.scalarFitness = 1.0 / min_rank
@@ -86,23 +85,19 @@ class Population(Task):
         best = min(self.individuals, key=lambda individual: individual.factorial_rank[task])
         return best
 
-    def add(self, offsprings: list[Individual]):
+    def add(self, offsprings: List[Individual]):
 
         self.individuals += offsprings
 
-        for offspring in offsprings:
+        for offspringIndex, offspring in enumerate(offsprings):
             child: Individual = offspring
             rankInTask = self.countRank(child.skillFactor)
-            index: int = -1
-            for j in range(len(rankInTask)):
-                if rankInTask[j].fitnessTask[child.skillFactor] > child.fitnessTask[child.skillFactor]:
-                    index = j
-                    break
+            index = next(idx for idx, rankInTask in enumerate(rankInTask)
+                         if rankInTask.fitnessTask[child.skillFactor] > child.fitnessTask[child.skillFactor])
             if index > -1:
-                for j in range(index, len(rankInTask), 1):
-                    tmpIndividual: Individual = rankInTask[j]
+                for tmpIndividual in rankInTask[index:]:
                     rank = tmpIndividual.factorial_rank
-                    rank[child.skillFactor] = rank[child.skillFactor] + 1
+                    rank[child.skillFactor] += 1
                     tmpIndividual.factorial_rank = rank
             else:
                 index = len(rankInTask)
@@ -110,13 +105,13 @@ class Population(Task):
 
             facRankInd[child.skillFactor] = index + 1
             child.setFactorial_rank = facRankInd
-            offspring = child
+            offsprings[offspringIndex] = child
 
         for ind in offsprings:
             ind.scalarFitness = 1 / ind.getMinFactorialRank()
 
-    def countRank(self, task: int):
-        lstIndividualInTask: list[Individual] = []
+    def countRank(self, task: int) -> List[Individual]:
+        lstIndividualInTask: List[Individual] = []
         for ind in self.individuals:
             check: bool = True
             for j in range(len(lstIndividualInTask)):

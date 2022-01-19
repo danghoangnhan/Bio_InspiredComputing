@@ -211,13 +211,13 @@ class GA(object):
                     cityA = global_truck_list[int(x[0]) - 1]
                     cityB = global_truck_list[int(x[1]) - 1]
                     # if and elifs for adj table insertion conditions
-                    if (cityA not in WisdomPath.path and cityB == WisdomPath.path[0]):
+                    if cityA not in WisdomPath.path and cityB == WisdomPath.path[0]:
                         WisdomPath.path.insert(0, cityA)
-                    elif (cityA not in WisdomPath.path and cityB == WisdomPath.path[len(WisdomPath.path) - 1]):
+                    elif cityA not in WisdomPath.path and cityB == WisdomPath.path[len(WisdomPath.path) - 1]:
                         WisdomPath.path.insert(len(WisdomPath.path), cityA)
-                    elif (cityB not in WisdomPath.path and cityA == WisdomPath.path[0]):
+                    elif cityB not in WisdomPath.path and cityA == WisdomPath.path[0]:
                         WisdomPath.path.insert(0, cityB)
-                    elif (cityB not in WisdomPath.path and cityA == WisdomPath.path[len(WisdomPath.path) - 1]):
+                    elif cityB not in WisdomPath.path and cityA == WisdomPath.path[len(WisdomPath.path) - 1]:
                         WisdomPath.path.insert(len(WisdomPath.path), cityB)
                 # Fills rest
                 for city in global_truck_list:

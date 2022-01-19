@@ -31,7 +31,8 @@ class Knapsack(Task, ABC):
     def __init__(self, fileName):
         self.parseFile(fileName)
         self.stride = 0
-        self.window = np.random.uniform(0, 1,4)
+        self.window = np.random.uniform(0, 1, 4)
+
     def generate_things(self, num: int) -> [Thing]:
         return [Thing(f"thing{i}", i, i) for i in range(1, num + 1)]
 
@@ -131,7 +132,8 @@ class Knapsack(Task, ABC):
                 if x_decode[self.priceWeightLineNumbers[i]] == 1:
                     wx = wx - self.weights[self.priceWeightLineNumbers[i]]
                     for k in range(self.window.shape[0]):
-                        x.set(self.priceWeightLineNumbers[i] * self.stride + k, 0.5 / (self.window.shape[0] * self.windowMax()))
+                        x.set(self.priceWeightLineNumbers[i] * self.stride + k,
+                              0.5 / (self.window.shape[0] * self.windowMax()))
                 i += 1
         else:
             while wx > self.capacity:
@@ -142,18 +144,18 @@ class Knapsack(Task, ABC):
 
     def getWeight(self, ind):
         x = self.decode(ind)
-        res = np.sum(np.multiply(self.weights,x))
+        res = np.sum(np.multiply(self.weights, x))
         return res
 
     def windowMax(self):
-        maxWindow:float = -1
+        maxWindow: float = -1
         for window in range(self.window):
             if window > maxWindow:
                 maxWindow = window
         maxWindow = np.amax(self.window)
         return max
 
-    def computeFitness(self,ind):
+    def computeFitness(self, ind):
         x = self.decode(ind)
         res = 0 - np.sum(np.multiply(self.prices, x))
         return res

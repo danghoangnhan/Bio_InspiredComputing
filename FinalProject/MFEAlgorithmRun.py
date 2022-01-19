@@ -1,8 +1,8 @@
 from ga.MFEA import MFEA
 from task.Knapsack import Knapsack
+from task.cvrp import cvrp
 Tasks: list = [
-    Knapsack("data/knapsack/100/s000.kp"),
-    Knapsack("data/knapsack/100/s001.kp")
+    cvrp("data/com_vrp/instances/A/A-n32-k5.vrp")
 ]
 g: MFEA = MFEA(Tasks, 50, 0.1, 50,ITERATION=10)
 g.run(50,)
